@@ -1,7 +1,7 @@
 /* -*-	Mode:C++; c-basic-offset:8; tab-width:8; indent-tabs-mode:t -*- */
 /*
  * Author: Sergio Herreria, Sergio.Herreria@det.uvigo.es 
- * Date: Jun 2014 
+ * Date: Jul 2014 
  * Copyright (C) Sergio Herreria 2014. All rights reserved.
  */
 
@@ -19,10 +19,11 @@ void DRX::reset()
 {
 	trace(ACTIVE_IDLE);
 	if (queue_threshold_ == 0) {
-		queue_threshold_ = 1.0;
 		dynamic_queue_threshold_ = 1;
+		queue_threshold_ = 1.0;
+		max_queue_threshold_ = time_threshold_ / subframe_length_;
 		cycle_packets_sent_ = 0;
-		cycle_sum_delay_ = prev_arrival_time_ = avg_interarrival_time_ = 0.0;
+		cycle_sum_delay_ = prev_arrival_time_ = avg_rate_ = 0.0;
 	}
 	Queue::reset();
 }
@@ -65,9 +66,13 @@ void DRX::enque(Packet* p)
 		double now = Scheduler::instance().clock();
 		if (dynamic_queue_threshold_) {
 			HDR_CMN(p)->timestamp() = now;
-			avg_interarrival_time_ = avg_interarrival_time_ ? 
-				0.125 * (now - prev_arrival_time_) + 0.875 * avg_interarrival_time_ : 
-				now - prev_arrival_time_;
+			double interarrival_time = now - prev_arrival_time_;
+			if (avg_rate_) {
+				avg_rate_ = 1.0 / interarrival_time + 
+					exp(-0.5 * interarrival_time / time_threshold_) * (avg_rate_ - 1.0 / interarrival_time);
+			} else {
+				avg_rate_ = 1.0 / interarrival_time;
+			}
 			prev_arrival_time_ = now;
 		}
 		if (state_ != ACTIVE && state_ != ACTIVE_IDLE && hol_packet_arrival_time_ == 0) {
@@ -106,7 +111,7 @@ Packet* DRX::deque()
 
 	if (p != 0 && dynamic_queue_threshold_) {
 		cycle_packets_sent_++;
-		cycle_sum_delay_ += now - HDR_CMN(p)->timestamp();
+		cycle_sum_delay_ += now - HDR_CMN(p)->timestamp();		
 	}
 
 	return p;
@@ -151,13 +156,11 @@ void DRX::trace(TracedState state)
 		timer_.resched(subframe_length_ * (short_cycle_length_ - on_duration_timer_ - short_to_active_length_));
 		if (dynamic_queue_threshold_ && cycle_packets_sent_) {
 			double cycle_avg_delay = cycle_sum_delay_ / cycle_packets_sent_;
-			double diff_threshold = 2.0 * (target_avg_delay_ - cycle_avg_delay) / avg_interarrival_time_;
-			if (queue_threshold_ >= 2.0) {
-				diff_threshold /= 1.0 - 2.0/queue_threshold_/queue_threshold_;
-			}
-			queue_threshold_ += diff_threshold;
+			queue_threshold_ += 2.0 * avg_rate_ * (target_avg_delay_ - cycle_avg_delay);
 			if (queue_threshold_ < 1) {
 				queue_threshold_ = 1;
+			} else if (queue_threshold_ > max_queue_threshold_) {
+				queue_threshold_ = max_queue_threshold_;
 			}
 			cycle_packets_sent_ = 0;
 			cycle_sum_delay_ = 0.0;

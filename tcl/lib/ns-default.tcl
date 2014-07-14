@@ -1605,3 +1605,10 @@ Queue/DRX set queue_threshold_ 1
 Queue/DRX set time_threshold_ 1.0
 Queue/DRX set target_avg_delay_ 0.128 
 
+# ETSI Traffic
+Application/Traffic/Etsi set inter_session_time_ 20
+Application/Traffic/Etsi set calls_per_session_ 5
+Application/Traffic/Etsi set reading_time_ 1
+Application/Traffic/Etsi set packets_per_call_ 25
+Application/Traffic/Etsi set inter_arrival_time_ 0.0025
+Application/Traffic/Etsi set packetSize_ 1500

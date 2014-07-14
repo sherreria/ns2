@@ -1,7 +1,7 @@
 /* -*-	Mode:C++; c-basic-offset:8; tab-width:8; indent-tabs-mode:t -*- */
 /*
  * Author: Sergio Herreria, Sergio.Herreria@det.uvigo.es 
- * Date: Jun 2014 
+ * Date: Jul 2014 
  * Copyright (C) Sergio Herreria 2014. All rights reserved.
  */
 
@@ -39,7 +39,7 @@ enum TracedState {
 	DRX_SHORT_INACTIVE, 
 	DRX_LONG_INACTIVE, 
 	DRX_SHORT_TO_ACTIVE, 
-	DRX_LONG_TO_ACTIVE
+	DRX_LONG_TO_ACTIVE,
 };
 
 /*
@@ -103,16 +103,17 @@ protected:
 
 	double queue_threshold_;         // minimum number of queued packets required to disable DRX (pkts)
 	double time_threshold_;          // maximum waiting time for queued packets (seconds)
-	int dynamic_queue_threshold_;    // true if the queue threshold is adjusted dynamically (bool)
-	int cycle_packets_sent_;
-	double cycle_sum_delay_;
-	double target_avg_delay_;
-	double avg_interarrival_time_;
-	double prev_arrival_time_;
+	int dynamic_queue_threshold_;    // true if the queue threshold can be adjusted dynamically (bool)
+	double target_avg_delay_;        // average waiting time desired for queued packets if dynamic queue threshold (seconds)
+	double max_queue_threshold_;     // maximum queue threshold if dynamic queue threshold (pkts)
+	int cycle_packets_sent_;         // number of packets sent in current coalescing cycle (pkts)
+	double cycle_sum_delay_;         // sum of the delays experienced by packets in current coalescing cycle (seconds)
+	double avg_rate_;                // average packet rate (pkts/s)
+	double prev_arrival_time_;       // arrival time of the previous packet (seconds)
 
 	TracedState state_;              // queue state
 	int consecutive_cycles_;         // current number of consecutive cycles in DRX state
-	double hol_packet_arrival_time_; // arrival time of the first packet in current DRX cycle
+	double hol_packet_arrival_time_; // arrival time of the first packet in current coalescing cycle (seconds)
 };
 
 #endif
